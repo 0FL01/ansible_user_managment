@@ -1,0 +1,60 @@
+---
+- name: Создание пользователей
+  ansible.builtin.user:
+    name: "{{ item.username }}"
+    groups: "{{ item.groups | join(',') }}"
+    shell: "{{ default_shell }}"
+    create_home: "{{ create_home }}"
+    state: present
+  loop: "{{ users_to_add }}"
+  tags:
+    - users
+    - add_users
+
+- name: Добавление пользователей в группу docker
+  ansible.builtin.user:
+    name: "{{ item.username }}"
+    groups: docker
+    append: yes
+  loop: "{{ users_to_add }}"
+  when: item.docker_access | default(false) | bool
+  tags:
+    - users
+    - docker
+
+- name: Создание .ssh директории
+  ansible.builtin.file:
+    path: "/home/{{ item.username }}/.ssh"
+    state: directory
+    mode: '0700'
+    owner: "{{ item.username }}"
+    group: "{{ item.username }}"
+  loop: "{{ users_to_add }}"
+  when: item.ssh_public_key is defined
+  tags:
+    - ssh
+    - add_users
+
+- name: Добавление SSH ключей
+  ansible.builtin.template:
+    src: authorized_keys.j2
+    dest: "/home/{{ item.username }}/.ssh/authorized_keys"
+    mode: '0600'
+    owner: "{{ item.username }}"
+    group: "{{ item.username }}"
+  loop: "{{ users_to_add }}"
+  when: item.ssh_public_key is defined
+  tags:
+    - ssh
+    - add_users
+
+- name: Добавление пользователей в группу kamailio
+  ansible.builtin.user:
+    name: "{{ item.username }}"
+    groups: kamailio
+    append: yes
+  loop: "{{ users_to_add }}"
+  when: item.systemd_access | default(false) | bool
+  tags:
+    - users
+    - kamailio

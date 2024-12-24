@@ -1,0 +1,112 @@
+---
+- name: Проверка существования директорий
+  ansible.builtin.stat:
+    path: "{{ item.value.path }}"
+  register: dir_check
+  loop: "{{ directory_permissions | dict2items }}"
+  loop_control:
+    label: "{{ item.value.path }}"
+
+- name: Настройка прав доступа к директориям
+  ansible.builtin.file:
+    path: "{{ item.0.value.path }}"
+    state: directory
+    mode: "{{ '0755' if item.0.value.read and not item.0.value.write else '0775' }}"
+    group: "{{ users_to_add[0].groups[0] }}"
+    recurse: yes
+    owner: root
+  loop: "{{ directory_permissions | dict2items | zip(dir_check.results) | list }}"
+  loop_control:
+    label: "{{ item.0.value.path }}"
+  when: item.1.stat.exists
+
+- name: Получение списка всех поддиректорий
+  ansible.builtin.find:
+    paths: "{{ item.0.value.path }}"
+    file_type: directory
+    recurse: yes
+  register: subdirs
+  loop: "{{ directory_permissions | dict2items | zip(dir_check.results) | list }}"
+  loop_control:
+    label: "{{ item.0.value.path }}"
+  when: item.1.stat.exists
+
+- name: Install ACL package on Debian
+  ansible.builtin.apt:
+    name: acl
+    state: present
+    update_cache: yes
+  become: true
+  when: ansible_distribution == 'Debian'
+  tags:
+    - permissions
+    - acl
+
+- name: Check if ACL package is installed
+  ansible.builtin.package_facts:
+    manager: auto
+  register: pkg_facts
+
+- name: Fail if ACL is not available
+  ansible.builtin.fail:
+    msg: "ACL package is required but not installed"
+  when: "'acl' not in ansible_facts.packages"
+
+- name: Установка ACL для пользователя на все поддиректории
+  ansible.builtin.acl:
+    path: "{{ item.0.value.path }}"
+    entity: "{{ users_to_add[0].username }}"
+    etype: user
+    permissions: "{{ 'r-x' if item.0.value.read and not item.0.value.write else 'rwx' }}"
+    recursive: yes
+    state: present
+  loop: "{{ directory_permissions | dict2items | zip(dir_check.results) | list }}"
+  loop_control:
+    label: "{{ item.0.value.path }}"
+  when: item.1.stat.exists
+
+- name: Установка ACL по умолчанию
+  ansible.builtin.acl:
+    path: "{{ item.0.value.path }}"
+    entity: "{{ users_to_add[0].username }}"
+    etype: user
+    permissions: "{{ 'r-x' if item.0.value.read and not item.0.value.write else 'rwx' }}"
+    recursive: yes
+    default: yes
+    state: present
+  loop: "{{ directory_permissions | dict2items | zip(dir_check.results) | list }}"
+  loop_control:
+    label: "{{ item.0.value.path }}"
+  when: item.1.stat.exists
+
+- name: Создание sudoers файла для доступа к systemd
+  ansible.builtin.template:
+    src: systemd_sudoers.j2
+    dest: "/etc/sudoers.d/systemd_permissions"
+    mode: '0440'
+    validate: 'visudo -cf %s'
+  tags:
+    - systemd
+    - permissions
+
+- name: Создание sudoers файла для доступа к kamailio
+  ansible.builtin.template:
+    src: kamailio_sudoers.j2
+    dest: "/etc/sudoers.d/kamailio_permissions"
+    mode: '0440'
+    validate: 'visudo -cf %s'
+  tags:
+    - kamailio
+    - permissions
+
+- name: Настройка SELinux контекста для kamailio (если SELinux включен)
+  ansible.builtin.shell: |
+    semanage fcontext -a -t kamailio_etc_t "{{ item.value.path }}(/.*)?"
+    restorecon -Rv "{{ item.value.path }}"
+  loop: "{{ directory_permissions | dict2items }}"
+  when: 
+    - ansible_selinux.status == "enabled"
+    - "'kamailio' in item.key"
+  loop_control:
+    label: "{{ item.value.path }}"
+  ignore_errors: yes

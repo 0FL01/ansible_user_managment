@@ -1,0 +1,6 @@
+---
+- name: Удаление пользователей
+  hosts: ES_UAT
+  become: true
+  roles:
+    - remove_users

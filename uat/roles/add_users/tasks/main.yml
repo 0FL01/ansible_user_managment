@@ -1,0 +1,9 @@
+---
+- name: Включение задачи создания групп
+  import_tasks: groups.yml
+
+- name: Включение задачи создания пользователей
+  import_tasks: users.yml
+
+- name: Включение задачи настройки прав доступа
+  import_tasks: permissions.yml

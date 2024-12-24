@@ -1,0 +1,59 @@
+---
+# Определение групп
+system_groups:
+  - name: dev
+    gid: 1001
+  - name: qa
+    gid: 1002
+  - name: eng
+    gid: 1003
+
+# Пользователи для добавления
+users_to_add:
+  - username: somebody
+    groups: 
+      - eng
+    docker_access: true
+    systemd_access: true
+    ssh_public_key: "ssh-ed25519...."
+
+# Права доступа к директориям
+directory_permissions:
+  data:
+    path: /data
+    read: true
+    write: true
+  kamailio:
+    path: /usr/local/etc/kamailio
+    read: true
+    write: true
+  kamailio_run:
+    path: /var/run/kamailio
+    read: true
+    write: true
+  kamailio_lib:
+    path: /var/lib/kamailio
+    read: true
+    write: true
+  systemd:
+    path: /etc/systemd/system
+    read: true
+    write: true
+  postgresql_conf:
+    path: /etc/postgresql
+    read: true
+    write: true
+  postgresql_data:
+    path: /var/lib/postgresql
+    read: true
+    write: true
+
+# Пользователи для удаления
+users_to_remove:
+  - username: somebody
+ # - username: somebody
+
+# Общие настройки
+default_shell: /bin/bash
+create_home: true
+remove_home: false

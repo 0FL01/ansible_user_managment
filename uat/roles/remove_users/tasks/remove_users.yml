@@ -1,0 +1,10 @@
+---
+- name: Удаление пользователей
+  ansible.builtin.user:
+    name: "{{ item.username }}"
+    state: absent
+    remove: "{{ remove_home }}"
+  loop: "{{ users_to_remove }}"
+  tags:
+    - users
+    - remove_users

@@ -1,0 +1,6 @@
+---
+- name: Добавление пользователей и настройка доступа
+  hosts: ES_UAT
+  become: true
+  roles:
+    - add_users

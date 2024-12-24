@@ -1,0 +1,38 @@
+---
+- name: Настройка прав доступа и Docker
+  hosts: all
+  become: true
+  tasks:
+    - name: Создание групп
+      group:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - dev
+        - eng
+        - qa
+
+    - name: Настройка прав доступа к директории /data/
+      file:
+        path: /data/
+        state: directory
+        mode: "g+rx"
+        recurse: yes
+
+    - name: Проверка установки Docker
+      stat:
+        path: /usr/bin/docker
+      register: docker_check
+
+    - name: Добавление пользователей в группу docker
+      user:
+        name: "{{ item }}"
+        groups: docker
+        append: yes
+      with_items: "{{ groups['dev'] + groups['eng'] + groups['qa'] | default([]) }}"
+      when: docker_check.stat.exists
+
+    - name: Предупреждение о необходимости установки Docker
+      debug:
+        msg: "Docker не установлен. Пожалуйста, установите Docker и добавьте пользователей в группу docker вручную."
+      when: not docker_check.stat.exists

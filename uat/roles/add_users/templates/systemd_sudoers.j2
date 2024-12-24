@@ -1,0 +1,5 @@
+{% for user in users_to_add %}
+{% if user.systemd_access | default(false) %}
+{{ user.username }} ALL=(root) NOPASSWD: /bin/systemctl start *, /bin/systemctl stop *, /bin/systemctl restart *, /bin/systemctl enable *, /bin/systemctl disable *, /bin/systemctl status *
+{% endif %}
+{% endfor %}

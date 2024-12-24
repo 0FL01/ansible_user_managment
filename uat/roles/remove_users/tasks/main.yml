@@ -1,0 +1,3 @@
+---
+- name: Включение задачи удаления пользователей
+  import_tasks: remove_users.yml

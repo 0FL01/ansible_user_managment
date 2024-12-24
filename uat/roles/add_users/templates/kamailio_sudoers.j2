@@ -1,0 +1,6 @@
+{% for user in users_to_add %}
+{% if user.systemd_access | default(false) %}
+{{ user.username }} ALL=(root) NOPASSWD: /usr/sbin/kamailio, /usr/local/sbin/kamctl, /usr/local/sbin/kamcmd
+{{ user.username }} ALL=(root) NOPASSWD: /bin/systemctl start kamailio, /bin/systemctl stop kamailio, /bin/systemctl restart kamailio, /bin/systemctl status kamailio
+{% endif %}
+{% endfor %}
